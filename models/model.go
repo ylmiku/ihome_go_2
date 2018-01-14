@@ -100,7 +100,7 @@ func init() {
 	//注册orm所关联的数据库
 
 	//注册一个orm所关联的数据库的驱动 最后一个参数是数据库最大的链接个数
-	orm.RegisterDataBase("default", "mysql", "root:mysql@tcp(127.0.0.1:3306)/ihome_go_2?charset=utf8", 30)
+	orm.RegisterDataBase("default", "mysql", "root: @tcp(127.0.0.1:3306)/ihome_go?charset=utf8", 30)
 
 	//给orm 注册 model 模块  注册表
 	orm.RegisterModel(new(User), new(House), new(OrderHouse), new(Area), new(HouseImage), new(Facility))
