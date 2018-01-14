@@ -1,8 +1,10 @@
 package main
 
 import (
+	//"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
+	//"ihome_go_2/models"
 	_ "ihome_go_2/models"
 	_ "ihome_go_2/routers"
 	"net/http"
@@ -27,6 +29,15 @@ func TransparentStatic(ctx *context.Context) {
 }
 
 func main() {
+
+	//设置fastdfs的请求的静态路径重定向
+	beego.SetStaticPath("/group1/M00", "fastdfs/storage_data/data")
+
+	//测试上传一个文件到fastdfs中
+	/*
+		_, fileid, _ := models.FDFSUploadByFileName("./main.go")
+		fmt.Println("===== fileid === ", fileid)
+	*/
 
 	ignoreStaticPath()
 
