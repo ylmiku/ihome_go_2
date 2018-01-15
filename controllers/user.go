@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego"
+	_ "github.com/astaxie/beego/cache/redis"
 	"github.com/astaxie/beego/orm"
 	"ihome_go_2/models"
 	"path"
@@ -182,7 +184,7 @@ func (this *UserController) UploadAvatar() {
 	if err1 != nil {
 		resp.Errno = models.RECODE_IOERR
 		resp.Errmsg = models.RecodeText(resp.Errno)
-		beego.Info("upload file error , name = ", header.Filename)
+		beego.Info("upload file error , name ===++++++++++++++++++++++++++++++++++++++++++++++++++= ", header.Filename)
 		return
 	}
 
@@ -201,7 +203,6 @@ func (this *UserController) UploadAvatar() {
 	}
 
 	//将fileid 拼接一个完整的url路径 + ip + port 返回给前端
-
 	avatar_url := "http://192.168.48.129:9091/" + fileId
 
 	url_map := make(map[string]interface{})
@@ -211,14 +212,19 @@ func (this *UserController) UploadAvatar() {
 	return
 }
 
-//api/v1.0/user/name  put 更新用户名
-func (this *UserController) UserName() {
+func (this *UserController) UpdataUserName() {
 	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
 	defer this.RetData(&resp)
 
-	//通过session得到当前用到User_id
+	//通过session得到当前用的user_id
 	user_id := this.GetSession("user_id")
 
+	/*
+		type Name struct {
+			Name string `json:"name"`
+		}
+		var req_name Name
+	*/
 	req_name := make(map[string]interface{})
 	json.Unmarshal(this.Ctx.Input.RequestBody, &req_name)
 
@@ -241,15 +247,15 @@ func (this *UserController) UserName() {
 
 	if _, err := o.Update(&user, "name"); err != nil {
 		resp.Errno = models.RECODE_DBERR
-		resp.Errmsg = models.RecodeText(resp.Errmsg)
+		resp.Errmsg = models.RecodeText(resp.Errno)
 		return
 	}
 
+	//更新session的name  和 user_id字段
 	this.SetSession("user_id", user_id)
 	this.SetSession("name", name)
 
 	resp.Data = req_name
-
 	return
 }
 
@@ -261,27 +267,35 @@ func (this *UserController) UserInfo() {
 	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
 	defer this.RetData(&resp)
 
-	// 从mysql中 查询user数据
+	//通过session得到当前用到User_id
+	user_id := this.GetSession("user_id")
+
+	user := models.User{Id: user_id.(int)}
 	o := orm.NewOrm()
 
+	// 从mysql中 查询user数据
+	//	o := orm.NewOrm()
+
 	// user := models.User{Id: user_id.(int), Avatar_url: fileId}
-	user := models.User{}
+	//	user := models.User{}
 
 	qs := o.QueryTable("user")
-	num, err := qs.All(&user)
-	if err != nil {
-		resp.Errno = models.RECODE_DBERR
-		resp.Errmsg = models.RecodeText(resp.Errno)
-		return
 
-	}
-	if num == 0 {
-		resp.Errno = models.RECODE_DBERR
-		resp.Errmsg = models.RecodeText(resp.Errno)
-		return
+	qs.Filter("Id", user_id).All(&user)
+	//	num, err := qs.All(&user)
+	/*	if err != nil {
+			resp.Errno = models.RECODE_DBERR
+			resp.Errmsg = models.RecodeText(resp.Errno)
+			return
 
-	}
+		}
+		if num == 0 {
+			resp.Errno = models.RECODE_DBERR
+			resp.Errmsg = models.RecodeText(resp.Errno)
+			return
 
+		}
+	*/
 	user.Avatar_url = "http://192.168.48.129:9091/" + user.Avatar_url
 
 	beego.Info("UserInfo =  ", user)
@@ -289,16 +303,17 @@ func (this *UserController) UserInfo() {
 	resp.Data = user
 
 	return
-
 }
 
-// /api/v1.0/user/auth  get  实名认证
+// /api/v1.0/user/auth  get  实名认证检查
 func (this *UserController) UserAuth() {
 	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
 	defer this.RetData(&resp)
 
 	//通过session得到当前用到User_id
 	user_id := this.GetSession("user_id")
+
+	//	fmt.Println("=============================", user_id)
 
 	// 从mysql中 查询user数据
 	o := orm.NewOrm()
@@ -320,5 +335,56 @@ func (this *UserController) UserAuth() {
 
 	beego.Info(user_id)
 	resp.Data = user
+	return
+}
+
+// /api/v1.0/user/auth post  更新实名认证信息
+func (this *UserController) UserAuthmsg() {
+
+	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
+	defer this.RetData(&resp)
+
+	//通过session得到当前用到User_id
+	user_id := this.GetSession("user_id")
+
+	fmt.Println("=============================", user_id)
+
+	//1 得到客户端传递的信息 json解析
+	//request
+	var AuthMsg = make(map[string]interface{})
+	json.Unmarshal(this.Ctx.Input.RequestBody, &AuthMsg)
+
+	card := AuthMsg["id_card"].(string)
+	name := AuthMsg["real_name"].(string)
+	fmt.Println(card, name)
+	//2 校验信息的合法性 (real_name  id_card   sms_code)
+	//isIDCard1=/^[1-9]\d{7}((0\d)|(1[0-2]))(([0|1|2]\d)|3[0-1])\d{3}$|^[1-9]\d{5}[1-9]\d{3}((0\d)|(1[0-2]))(([0|1|2]\d)|3[0-1])\d{3}([0-9]|X)$/;
+	if AuthMsg["real_name"] == "" || AuthMsg["id_card"] == "" {
+		resp.Errno = models.RECODE_REQERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+	}
+
+	//更新user表的 real_name 和 id_card 字段
+
+	o := orm.NewOrm()
+	var user []*models.User
+	qs := o.QueryTable("user")
+	qs.Filter("Id", user_id).All(&user)
+
+	for _, user1 := range user {
+		user1.Id_card = card
+		user1.Real_name = name
+		if _, err := o.Update(user1); err != nil {
+			resp.Errno = models.RECODE_DBERR
+			resp.Errmsg = models.RecodeText(resp.Errno)
+			return
+		}
+
+	}
+
+	beego.Info(user_id)
+	this.SetSession("user_id", user_id)
+
 	return
 }
