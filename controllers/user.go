@@ -210,3 +210,115 @@ func (this *UserController) UploadAvatar() {
 
 	return
 }
+
+//api/v1.0/user/name  put 更新用户名
+func (this *UserController) UserName() {
+	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
+	defer this.RetData(&resp)
+
+	//通过session得到当前用到User_id
+	user_id := this.GetSession("user_id")
+
+	req_name := make(map[string]interface{})
+	json.Unmarshal(this.Ctx.Input.RequestBody, &req_name)
+
+	name, ok := req_name["name"].(string)
+	if ok == false {
+		resp.Errno = models.RECODE_PARAMERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+	}
+
+	if name == "" {
+		resp.Errno = models.RECODE_REQERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+	}
+
+	//更新user数据库中的name字段
+	o := orm.NewOrm()
+	user := models.User{Id: user_id.(int), Name: name}
+
+	if _, err := o.Update(&user, "name"); err != nil {
+		resp.Errno = models.RECODE_DBERR
+		resp.Errmsg = models.RecodeText(resp.Errmsg)
+		return
+	}
+
+	this.SetSession("user_id", user_id)
+	this.SetSession("name", name)
+
+	resp.Data = req_name
+
+	return
+}
+
+// /api/v1.0/user   GET
+func (this *UserController) UserInfo() {
+
+	beego.Info("=== userinfo controller is called =====")
+
+	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
+	defer this.RetData(&resp)
+
+	// 从mysql中 查询user数据
+	o := orm.NewOrm()
+
+	// user := models.User{Id: user_id.(int), Avatar_url: fileId}
+	user := models.User{}
+
+	qs := o.QueryTable("user")
+	num, err := qs.All(&user)
+	if err != nil {
+		resp.Errno = models.RECODE_DBERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+
+	}
+	if num == 0 {
+		resp.Errno = models.RECODE_DBERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+
+	}
+
+	user.Avatar_url = "http://192.168.48.129:9091/" + user.Avatar_url
+
+	beego.Info("UserInfo =  ", user)
+
+	resp.Data = user
+
+	return
+
+}
+
+// /api/v1.0/user/auth  get  实名认证
+func (this *UserController) UserAuth() {
+	resp := Resp{Errno: models.RECODE_OK, Errmsg: models.RecodeText(models.RECODE_OK)}
+	defer this.RetData(&resp)
+
+	//通过session得到当前用到User_id
+	user_id := this.GetSession("user_id")
+
+	// 从mysql中 查询user数据
+	o := orm.NewOrm()
+	user := models.User{}
+
+	qs := o.QueryTable("user")
+	num, err := qs.All(&user)
+	if err != nil {
+		resp.Errno = models.RECODE_DBERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+	}
+	if num == 0 {
+		resp.Errno = models.RECODE_DBERR
+		resp.Errmsg = models.RecodeText(resp.Errno)
+		return
+
+	}
+
+	beego.Info(user_id)
+	resp.Data = user
+	return
+}
