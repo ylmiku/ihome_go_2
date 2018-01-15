@@ -311,25 +311,29 @@ func (this *UserController) UserAuth() {
 	defer this.RetData(&resp)
 
 	//通过session得到当前用到User_id
-	user_id := this.GetSession("user_id")
+	user_id := this.GetSession("user_id").(int)
 
 	//	fmt.Println("=============================", user_id)
 
 	// 从mysql中 查询user数据
-	o := orm.NewOrm()
-	user := models.User{}
+	/*	var user []*models.User
 
-	qs := o.QueryTable("user")
-	num, err := qs.All(&user)
-	if err != nil {
-		resp.Errno = models.RECODE_DBERR
-		resp.Errmsg = models.RecodeText(resp.Errno)
-		return
-	}
-	if num == 0 {
-		resp.Errno = models.RECODE_DBERR
-		resp.Errmsg = models.RecodeText(resp.Errno)
-		return
+		o := orm.NewOrm()
+		qs := o.QueryTable("user")
+		qs.Filter("Id", user_id).All(&user)
+	*/
+
+	o := orm.NewOrm()
+	user := models.User{Id: user_id}
+	err := o.Read(&user)
+	if err == orm.ErrNoRows {
+		fmt.Println("查询不到")
+
+	} else if err == orm.ErrMissPK {
+		fmt.Println("找不到主键")
+
+	} else {
+		fmt.Println(user.Id, user.Name)
 
 	}
 
