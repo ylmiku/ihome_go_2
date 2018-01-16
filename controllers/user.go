@@ -296,7 +296,7 @@ func (this *UserController) UserInfo() {
 
 		}
 	*/
-	user.Avatar_url = "http://192.168.48.129:9091/" + user.Avatar_url
+	//	user.Avatar_url = "http://192.168.48.129:9091/" + user.Avatar_url
 
 	beego.Info("UserInfo =  ", user)
 
